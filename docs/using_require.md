@@ -1,14 +1,7 @@
----
-module: [kind=guide] using_require
----
-
-<!--
-SPDX-FileCopyrightText: 2021 The CC: Tweaked Developers
-
-SPDX-License-Identifier: MPL-2.0
--->
-
 # Reusing code with require
+
+<!-- from CC:tweaked, MPL-2.0 license -->
+
 A library is a collection of useful functions and other definitions which is stored separately to your main program. You
 might want to create a library because you have some functions which are used in multiple programs, or just to split
 your program into multiple more modular files.
@@ -48,15 +41,18 @@ more_term.write_center("Hello, world!")
 When run, this'll clear the screen and print some text in the middle of the first line.
 
 ## require in depth
+
 While the previous section is a good introduction to how [`require`] operates, there are a couple of remaining points
 which are worth mentioning for more advanced usage.
 
 ### Libraries can return anything
+
 In our above example, we return a table containing the functions we want to expose. However, it's worth pointing out
 that you can return ''anything'' from your library - a table, a function or even just a string! [`require`] treats them
 all the same, and just returns whatever your library provides.
 
 ### Module resolution and the package path
+
 In the above examples, we defined our library in a file, and [`require`] read from it. While this is what you'll do most
 of the time, it is possible to make [`require`] look elsewhere for your library, such as downloading from a website or
 loading from an in-memory library store.
@@ -83,7 +79,8 @@ One other caveat is loading libraries from sub-directories. For instance, say we
 before we start looking for the library.
 
 ## External links
+
 There are several external resources which go into require in a little more detail:
 
- - The [Lua Module tutorial](http://lua-users.org/wiki/ModulesTutorial) on the Lua wiki.
- - [Lua's manual section on `require`](https://www.lua.org/manual/5.1/manual.html#pdf-require).
+* The [Lua Module tutorial](http://lua-users.org/wiki/ModulesTutorial) on the Lua wiki.
+* [Lua's manual section on `require`](https://www.lua.org/manual/5.1/manual.html#pdf-require).
