@@ -4,6 +4,7 @@ if #args < 1 then
     print(" - Will dig a staircase down N blocks")
     print(" - Auto-refuels with coal found while digging")
     print(" - Places chests when inventory is full")
+    print(" - Places floor blocks on the bottom of each step")
     return
 end
 
@@ -93,82 +94,22 @@ local function isAtBedrock()
     return false
 end
 
--- Find stone blocks in inventory for crafting stairs
-local function findStoneBlocks()
-    local stoneSlots = {}
+-- Find floor blocks in inventory
+local function findFloorBlocks()
+    local floorSlots = {}
     for slot = 1, 16 do
         turtle.select(slot)
         local item = turtle.getItemDetail()
         if item and (item.name == "minecraft:stone" or 
                      item.name == "minecraft:cobblestone" or
                      item.name == "minecraft:deepslate" or
-                     item.name == "minecraft:cobbled_deepslate") then
-            table.insert(stoneSlots, {slot = slot, count = item.count, name = item.name})
+                     item.name == "minecraft:cobbled_deepslate" or
+                     item.name == "minecraft:dirt" or
+                     item.name == "minecraft:grass_block") then
+            table.insert(floorSlots, {slot = slot, count = item.count, name = item.name})
         end
     end
-    return stoneSlots
-end
-
--- Craft stairs from stone blocks
-local function craftStairs()
-    local stoneSlots = findStoneBlocks()
-    if #stoneSlots == 0 then
-        print("No stone blocks found for crafting stairs!")
-        return false
-    end
-    
-    print("Crafting stairs from available stone blocks...")
-    local stairsCrafted = 0
-    
-    -- Craft stairs using 3x3 pattern: stone in slots 1,2,4,5,7,8 makes 4 stairs
-    while #stoneSlots > 0 and stairsCrafted < depth do
-        -- Clear crafting area (slots 1-9)
-        for slot = 1, 9 do
-            turtle.select(slot)
-            if turtle.getItemCount() > 0 then
-                -- Move non-stone items to later slots
-                for targetSlot = 10, 16 do
-                    if turtle.getItemCount(targetSlot) == 0 then
-                        turtle.transferTo(targetSlot)
-                        break
-                    end
-                end
-            end
-        end
-        
-        -- Set up stair crafting pattern
-        -- Pattern: X X _
-        --          X X _  
-        --          X X _
-        local pattern = {1, 2, 4, 5, 7, 8}
-        local stonesUsed = 0
-        
-        for _, craftSlot in ipairs(pattern) do
-            if #stoneSlots > 0 and stonesUsed < 6 then
-                local stoneSlot = stoneSlots[1]
-                turtle.select(stoneSlot.slot)
-                turtle.transferTo(craftSlot, 1)
-                stoneSlot.count = stoneSlot.count - 1
-                stonesUsed = stonesUsed + 1
-                
-                if stoneSlot.count <= 0 then
-                    table.remove(stoneSlots, 1)
-                end
-            end
-        end
-        
-        -- Craft the stairs
-        if turtle.craft() then
-            stairsCrafted = stairsCrafted + 4
-            print("Crafted 4 stairs, total: " .. stairsCrafted)
-        else
-            print("Failed to craft stairs")
-            break
-        end
-    end
-    
-    print("Finished crafting. Total stairs: " .. stairsCrafted)
-    return stairsCrafted > 0
+    return floorSlots
 end
 
 -- Find stairs in inventory
@@ -194,48 +135,15 @@ local function placeStair()
     return turtle.placeDown()
 end
 
--- Build stairs back up the stairway
-local function buildStairsUp(maxSteps)
-    print("Building stairs back up the stairway...")
-    
-    -- Turn around to face back up the stairway
-    turtle.turnLeft()
-    turtle.turnLeft()
-    
-    local stairsPlaced = 0
-    
-    for i = 1, maxSteps do
-        -- Check if we have stairs to place
-        local stairSlot = findStairs()
-        if not stairSlot then
-            print("No more stairs available! Placed " .. stairsPlaced .. " stairs.")
-            break
-        end
-        
-        print("Placing stair " .. (stairsPlaced + 1) .. " (step " .. i .. " of " .. maxSteps .. ")")
-        
-        -- Place stair block down
-        if placeStair() then
-            stairsPlaced = stairsPlaced + 1
-        else
-            print("Warning: Could not place stair at step " .. i)
-        end
-        
-        -- Move up and forward to next position
-        turtle.up()
-        if not turtle.forward() then
-            print("Error: Could not move forward at step " .. i)
-            return false
-        end
-        
-        -- Check fuel and inventory
-        if not checkFuel() then
-            print("Fuel issues while building stairs")
-            return false
+-- Place a floor block if there isn't one already
+local function placeFloor()
+    if not turtle.detectDown() then
+        local floorSlots = findFloorBlocks()
+        if #floorSlots > 0 then
+            turtle.select(floorSlots[1].slot)
+            return turtle.placeDown()
         end
     end
-    
-    print("Finished building stairs! Placed " .. stairsPlaced .. " total stairs.")
     return true
 end
 
@@ -390,6 +298,11 @@ local function digStairStep()
     if not smartDigDown() then return false end
     turtle.down()
     
+    -- Place floor block on the bottom
+    if not placeFloor() then
+        print("Warning: Could not place floor block")
+    end
+    
     return true
 end
 
@@ -423,6 +336,51 @@ local function digStaircase(steps)
     return true, actualSteps
 end
 
+-- Build stairs back up from current position
+local function buildStairsUp(maxSteps)
+    print("Building stairs back up...")
+    
+    -- Turn around to face back up the stairway
+    turtle.turnLeft()
+    turtle.turnLeft()
+    
+    local stairsPlaced = 0
+    
+    for i = 1, maxSteps do
+        -- Check if we have stairs to place
+        local stairSlot = findStairs()
+        if not stairSlot then
+            print("No more stairs available! Placed " .. stairsPlaced .. " stairs.")
+            break
+        end
+        
+        print("Placing stair " .. (stairsPlaced + 1) .. " (step " .. i .. " of " .. maxSteps .. ")")
+        
+        -- Place stair block down
+        if placeStair() then
+            stairsPlaced = stairsPlaced + 1
+        else
+            print("Warning: Could not place stair at step " .. i)
+        end
+        
+        -- Move up and forward to next position
+        turtle.up()
+        if not turtle.forward() then
+            print("Error: Could not move forward at step " .. i)
+            return false
+        end
+        
+        -- Check fuel and inventory
+        if not checkFuel() then
+            print("Fuel issues while building stairs")
+            return false
+        end
+    end
+    
+    print("Finished building stairs! Placed " .. stairsPlaced .. " total stairs.")
+    return true
+end
+
 -- Start the operation
 print("Initial fuel level: " .. turtle.getFuelLevel())
 if not checkFuel() then
@@ -442,20 +400,13 @@ if not success then
     return
 end
 
--- Craft stairs from collected blocks
+-- Build stairs back up with available blocks
 if actualSteps > 0 then
-    print("Now crafting stairs from collected blocks...")
-    if craftStairs() then
-        print("Stairs crafted successfully!")
-        
-        -- Build stairs back up
-        if buildStairsUp(actualSteps) then
-            print("Stairway construction complete!")
-        else
-            print("Failed to build stairs back up")
-        end
+    print("Now building stairs back up with available blocks...")
+    if buildStairsUp(actualSteps) then
+        print("Stairway construction complete!")
     else
-        print("Failed to craft stairs - no suitable blocks found")
+        print("Failed to build stairs back up")
     end
 else
     print("No steps were dug, nothing to build")
