@@ -195,18 +195,29 @@ local function placeStair()
 end
 
 -- Build stairs back up the stairway
-local function buildStairsUp(steps)
+local function buildStairsUp(maxSteps)
     print("Building stairs back up the stairway...")
     
     -- Turn around to face back up the stairway
     turtle.turnLeft()
     turtle.turnLeft()
     
-    for i = 1, steps do
-        print("Placing stair " .. i .. " of " .. steps)
+    local stairsPlaced = 0
+    
+    for i = 1, maxSteps do
+        -- Check if we have stairs to place
+        local stairSlot = findStairs()
+        if not stairSlot then
+            print("No more stairs available! Placed " .. stairsPlaced .. " stairs.")
+            break
+        end
+        
+        print("Placing stair " .. (stairsPlaced + 1) .. " (step " .. i .. " of " .. maxSteps .. ")")
         
         -- Place stair block down
-        if not placeStair() then
+        if placeStair() then
+            stairsPlaced = stairsPlaced + 1
+        else
             print("Warning: Could not place stair at step " .. i)
         end
         
@@ -224,7 +235,7 @@ local function buildStairsUp(steps)
         end
     end
     
-    print("Finished building stairs!")
+    print("Finished building stairs! Placed " .. stairsPlaced .. " total stairs.")
     return true
 end
 
