@@ -28,31 +28,48 @@ end
 -- Find coal in inventory and refuel with it
 local function autoRefuel()
     local currentSlot = turtle.getSelectedSlot()
+    local refueled = false
     
     for slot = 1, 16 do
         turtle.select(slot)
         local item = turtle.getItemDetail()
         if item and (item.name == "minecraft:coal" or item.name == "minecraft:charcoal") then
             local fuelBefore = turtle.getFuelLevel()
-            turtle.refuel()
+            local itemCount = turtle.getItemCount()
+            
+            -- Refuel with all coal in this slot
+            turtle.refuel(itemCount)
+            
             local fuelAfter = turtle.getFuelLevel()
             if fuelAfter > fuelBefore then
-                print("Refueled with " .. item.name .. ", fuel: " .. fuelAfter)
+                print("Refueled with " .. item.name .. ", fuel: " .. fuelBefore .. " -> " .. fuelAfter)
+                refueled = true
             end
         end
     end
     
     turtle.select(currentSlot)
+    return refueled
 end
 
 -- Check if we need to refuel and do so
 local function checkFuel()
-    if turtle.getFuelLevel() < 100 then
-        autoRefuel()
-        if turtle.getFuelLevel() < 50 then
-            print("Warning: Low fuel (" .. turtle.getFuelLevel() .. ")")
+    local currentFuel = turtle.getFuelLevel()
+    
+    -- Be more aggressive about refueling - refuel if below 200
+    if currentFuel < 200 then
+        print("Fuel low (" .. currentFuel .. "), searching for coal...")
+        local refueled = autoRefuel()
+        
+        if not refueled and currentFuel < 50 then
+            print("Critical: Very low fuel (" .. currentFuel .. ") and no coal found!")
+            return false
+        elseif not refueled then
+            print("Warning: Low fuel (" .. currentFuel .. ") and no coal found")
         end
     end
+    
+    return true
 end
 
 -- Find a chest in inventory
@@ -120,7 +137,9 @@ end
 local function smartDig()
     while turtle.detect() do
         turtle.dig()
-        checkFuel()
+        if not checkFuel() then
+            return false
+        end
         if not checkInventory() then
             return false
         end
@@ -131,7 +150,9 @@ end
 local function smartDigUp()
     while turtle.detectUp() do
         turtle.digUp()
-        checkFuel()
+        if not checkFuel() then
+            return false
+        end
         if not checkInventory() then
             return false
         end
@@ -142,7 +163,9 @@ end
 local function smartDigDown()
     while turtle.detectDown() do
         turtle.digDown()
-        checkFuel()
+        if not checkFuel() then
+            return false
+        end
         if not checkInventory() then
             return false
         end
@@ -152,6 +175,12 @@ end
 
 -- Dig one step of the staircase
 local function digStairStep()
+    -- Check fuel before each major operation
+    if not checkFuel() then
+        print("Error: Cannot continue due to fuel issues")
+        return false
+    end
+    
     -- Clear the path ahead
     if not smartDig() then return false end
     
@@ -195,9 +224,14 @@ local function digStaircase(steps)
 end
 
 -- Start the operation
-checkFuel()
+print("Initial fuel level: " .. turtle.getFuelLevel())
+if not checkFuel() then
+    print("Error: Cannot start - fuel issues!")
+    return
+end
+
 if turtle.getFuelLevel() == 0 then
-    print("Error: No fuel available!")
+    print("Error: No fuel available and no coal found!")
     return
 end
 
