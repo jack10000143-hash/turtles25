@@ -29,17 +29,17 @@ end
 local function autoRefuel()
     local currentSlot = turtle.getSelectedSlot()
     local refueled = false
-    
+
     for slot = 1, 16 do
         turtle.select(slot)
         local item = turtle.getItemDetail()
         if item and (item.name == "minecraft:coal" or item.name == "minecraft:charcoal") then
             local fuelBefore = turtle.getFuelLevel()
             local itemCount = turtle.getItemCount()
-            
+
             -- Refuel with all coal in this slot
             turtle.refuel(itemCount)
-            
+
             local fuelAfter = turtle.getFuelLevel()
             if fuelAfter > fuelBefore then
                 print("Refueled with " .. item.name .. ", fuel: " .. fuelBefore .. " -> " .. fuelAfter)
@@ -47,7 +47,7 @@ local function autoRefuel()
             end
         end
     end
-    
+
     turtle.select(currentSlot)
     return refueled
 end
@@ -55,12 +55,12 @@ end
 -- Check if we need to refuel and do so
 local function checkFuel()
     local currentFuel = turtle.getFuelLevel()
-    
+
     -- Be more aggressive about refueling - refuel if below 200
     if currentFuel < 200 then
         print("Fuel low (" .. currentFuel .. "), searching for coal...")
         local refueled = autoRefuel()
-        
+
         if not refueled and currentFuel < 50 then
             print("Critical: Very low fuel (" .. currentFuel .. ") and no coal found!")
             return false
@@ -68,7 +68,7 @@ local function checkFuel()
             print("Warning: Low fuel (" .. currentFuel .. ") and no coal found")
         end
     end
-    
+
     return true
 end
 
@@ -99,7 +99,7 @@ local function findStoneBlocks()
     for slot = 1, 16 do
         turtle.select(slot)
         local item = turtle.getItemDetail()
-        if item and (item.name == "minecraft:stone" or 
+        if item and (item.name == "minecraft:stone" or
                      item.name == "minecraft:cobblestone" or
                      item.name == "minecraft:deepslate" or
                      item.name == "minecraft:cobbled_deepslate") then
@@ -116,10 +116,10 @@ local function craftStairs()
         print("No stone blocks found for crafting stairs!")
         return false
     end
-    
+
     print("Crafting stairs from available stone blocks...")
     local stairsCrafted = 0
-    
+
     -- Craft stairs using 3x3 pattern: stone in slots 1,2,4,5,7,8 makes 4 stairs
     while #stoneSlots > 0 and stairsCrafted < depth do
         -- Clear crafting area (slots 1-9)
@@ -135,14 +135,14 @@ local function craftStairs()
                 end
             end
         end
-        
+
         -- Set up stair crafting pattern
         -- Pattern: X X _
         --          X X _  
         --          X X _
         local pattern = {1, 2, 4, 5, 7, 8}
         local stonesUsed = 0
-        
+
         for _, craftSlot in ipairs(pattern) do
             if #stoneSlots > 0 and stonesUsed < 6 then
                 local stoneSlot = stoneSlots[1]
@@ -150,13 +150,13 @@ local function craftStairs()
                 turtle.transferTo(craftSlot, 1)
                 stoneSlot.count = stoneSlot.count - 1
                 stonesUsed = stonesUsed + 1
-                
+
                 if stoneSlot.count <= 0 then
                     table.remove(stoneSlots, 1)
                 end
             end
         end
-        
+
         -- Craft the stairs
         if turtle.craft() then
             stairsCrafted = stairsCrafted + 4
@@ -166,7 +166,7 @@ local function craftStairs()
             break
         end
     end
-    
+
     print("Finished crafting. Total stairs: " .. stairsCrafted)
     return stairsCrafted > 0
 end
@@ -189,7 +189,7 @@ local function placeStair()
     if not stairSlot then
         return false
     end
-    
+
     turtle.select(stairSlot)
     return turtle.placeDown()
 end
@@ -197,13 +197,13 @@ end
 -- Build stairs back up the stairway
 local function buildStairsUp(maxSteps)
     print("Building stairs back up the stairway...")
-    
+
     -- Turn around to face back up the stairway
     turtle.turnLeft()
     turtle.turnLeft()
-    
+
     local stairsPlaced = 0
-    
+
     for i = 1, maxSteps do
         -- Check if we have stairs to place
         local stairSlot = findStairs()
@@ -211,30 +211,30 @@ local function buildStairsUp(maxSteps)
             print("No more stairs available! Placed " .. stairsPlaced .. " stairs.")
             break
         end
-        
+
         print("Placing stair " .. (stairsPlaced + 1) .. " (step " .. i .. " of " .. maxSteps .. ")")
-        
+
         -- Place stair block down
         if placeStair() then
             stairsPlaced = stairsPlaced + 1
         else
             print("Warning: Could not place stair at step " .. i)
         end
-        
+
         -- Move up and forward to next position
         turtle.up()
         if not turtle.forward() then
             print("Error: Could not move forward at step " .. i)
             return false
         end
-        
+
         -- Check fuel and inventory
         if not checkFuel() then
             print("Fuel issues while building stairs")
             return false
         end
     end
-    
+
     print("Finished building stairs! Placed " .. stairsPlaced .. " total stairs.")
     return true
 end
@@ -246,17 +246,17 @@ local function placeChestAndDump()
         print("Error: No chest found in inventory! Cannot dump items.")
         return false
     end
-    
+
     print("Inventory full, placing chest to the right...")
-    
+
     -- Turn right to place chest to the side
     turtle.turnRight()
-    
+
     -- Dig space for chest if needed
     while turtle.detect() do
         turtle.dig()
     end
-    
+
     -- Place chest
     turtle.select(chestSlot)
     if not turtle.place() then
@@ -264,9 +264,9 @@ local function placeChestAndDump()
         turtle.turnLeft()
         return false
     end
-    
+
     print("Chest placed successfully, dumping inventory...")
-    
+
     -- Dump all items except chests and coal (keep coal for fuel)
     local itemsDumped = 0
     for slot = 1, 16 do
@@ -274,8 +274,8 @@ local function placeChestAndDump()
         local item = turtle.getItemDetail()
         if item then
             -- Keep chests and coal, dump everything else
-            if item.name ~= "minecraft:chest" and 
-               item.name ~= "minecraft:coal" and 
+            if item.name ~= "minecraft:chest" and
+               item.name ~= "minecraft:coal" and
                item.name ~= "minecraft:charcoal" then
                 local count = turtle.getItemCount()
                 turtle.drop()
@@ -284,12 +284,12 @@ local function placeChestAndDump()
             end
         end
     end
-    
+
     print("Dumped " .. itemsDumped .. " items into chest")
-    
+
     -- Turn back to original direction
     turtle.turnLeft()
-    
+
     -- Verify we now have space
     if hasSpace() then
         print("Inventory cleared, resuming digging...")
@@ -307,7 +307,7 @@ local function checkInventory()
             print("Failed to place chest and dump inventory, stopping...")
             return false
         end
-        
+
         -- Double-check we have space now
         if not hasSpace() then
             print("Critical: Still no inventory space after chest dump!")
@@ -364,42 +364,70 @@ local function digStairStep()
         print("Error: Cannot continue due to fuel issues")
         return false
     end
-    
+
     -- Check if we hit bedrock
     if isAtBedrock() then
         print("Hit bedrock! Stopping excavation.")
         return false
     end
-    
+
     -- Clear the path ahead
     if not smartDig() then return false end
-    
+
     -- Move forward
     if not turtle.forward() then
         print("Error: Could not move forward")
         return false
     end
-    
+
     -- Clear above (2 blocks high)
     if not smartDigUp() then return false end
     turtle.up()
     if not smartDigUp() then return false end
-    
+
     -- Go back down and dig the step down
     turtle.down()
     if not smartDigDown() then return false end
     turtle.down()
-    
+
     return true
+end
+
+-- Place floor block if there is no floor
+local function placeFloor()
+    if not turtle.detectDown() then
+        local floorSlot = findFloorBlocks()
+        if floorSlot then
+            turtle.select(floorSlot)
+            turtle.placeDown()
+        else
+            print("No floor blocks found to place!")
+        end
+    end
+end
+
+-- Find floor blocks in inventory
+local function findFloorBlocks()
+    for slot = 1, 16 do
+        turtle.select(slot)
+        local item = turtle.getItemDetail()
+        if item and (item.name == "minecraft:stone" or
+                     item.name == "minecraft:cobblestone" or
+                     item.name == "minecraft:deepslate" or
+                     item.name == "minecraft:cobbled_deepslate") then
+            return slot
+        end
+    end
+    return nil
 end
 
 -- Main digging loop
 local function digStaircase(steps)
     local actualSteps = 0
-    
+
     for i = 1, steps do
         print("Digging step " .. i .. " of " .. steps)
-        
+
         if not digStairStep() then
             if isAtBedrock() then
                 print("Reached bedrock at step " .. i)
@@ -410,15 +438,18 @@ local function digStaircase(steps)
                 return false, 0
             end
         end
-        
+
         actualSteps = i
-        
+
         -- Auto-refuel periodically
         if i % 5 == 0 then
             checkFuel()
         end
+
+        -- Place floor block if there is no floor
+        placeFloor()
     end
-    
+
     print("Excavation complete! Dug " .. actualSteps .. " steps.")
     return true, actualSteps
 end
@@ -447,7 +478,7 @@ if actualSteps > 0 then
     print("Now crafting stairs from collected blocks...")
     if craftStairs() then
         print("Stairs crafted successfully!")
-        
+
         -- Build stairs back up
         if buildStairsUp(actualSteps) then
             print("Stairway construction complete!")
