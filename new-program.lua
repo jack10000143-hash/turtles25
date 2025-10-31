@@ -92,8 +92,12 @@ local function placeChestAndDump()
         return false
     end
     
-    -- Dig space to the right for chest
+    print("Inventory full, placing chest to the right...")
+    
+    -- Turn right to place chest to the side
     turtle.turnRight()
+    
+    -- Dig space for chest if needed
     while turtle.detect() do
         turtle.dig()
     end
@@ -106,27 +110,52 @@ local function placeChestAndDump()
         return false
     end
     
-    print("Placed chest, dumping inventory...")
+    print("Chest placed successfully, dumping inventory...")
     
-    -- Dump all items except chests
+    -- Dump all items except chests and coal (keep coal for fuel)
+    local itemsDumped = 0
     for slot = 1, 16 do
         turtle.select(slot)
         local item = turtle.getItemDetail()
-        if item and item.name ~= "minecraft:chest" then
-            turtle.drop()
+        if item then
+            -- Keep chests and coal, dump everything else
+            if item.name ~= "minecraft:chest" and 
+               item.name ~= "minecraft:coal" and 
+               item.name ~= "minecraft:charcoal" then
+                local count = turtle.getItemCount()
+                turtle.drop()
+                itemsDumped = itemsDumped + count
+                print("Dumped " .. count .. " " .. item.name)
+            end
         end
     end
     
+    print("Dumped " .. itemsDumped .. " items into chest")
+    
+    -- Turn back to original direction
     turtle.turnLeft()
-    return true
+    
+    -- Verify we now have space
+    if hasSpace() then
+        print("Inventory cleared, resuming digging...")
+        return true
+    else
+        print("Warning: Inventory still full after dumping!")
+        return false
+    end
 end
 
 -- Check if inventory is full and handle it
 local function checkInventory()
     if not hasSpace() then
-        print("Inventory full, placing chest...")
         if not placeChestAndDump() then
-            print("Failed to place chest, stopping...")
+            print("Failed to place chest and dump inventory, stopping...")
+            return false
+        end
+        
+        -- Double-check we have space now
+        if not hasSpace() then
+            print("Critical: Still no inventory space after chest dump!")
             return false
         end
     end
