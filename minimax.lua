@@ -109,6 +109,54 @@ local function findStoneBlocks()
     return stoneSlots
 end
 
+-- Find floor blocks in inventory (blocks that can be used for flooring)
+local function findFloorBlocks()
+    local floorSlots = {}
+    for slot = 1, 16 do
+        turtle.select(slot)
+        local item = turtle.getItemDetail()
+        if item and (item.name == "minecraft:stone" or 
+                     item.name == "minecraft:cobblestone" or
+                     item.name == "minecraft:deepslate" or
+                     item.name == "minecraft:cobbled_deepslate" or
+                     item.name == "minecraft:dirt" or
+                     item.name == "minecraft:grass" or
+                     item.name == "minecraft:gravel") then
+            table.insert(floorSlots, {slot = slot, count = item.count, name = item.name})
+        end
+    end
+    return floorSlots
+end
+
+-- Select a block suitable for flooring
+local function selectBlock()
+    local floorSlots = findFloorBlocks()
+    if #floorSlots > 0 then
+        turtle.select(floorSlots[1].slot)
+        return true
+    end
+    return false
+end
+
+-- Place floor block if there isn't one already
+local function placeFloor()
+    if not turtle.detectDown() then
+        if selectBlock() then
+            if turtle.placeDown() then
+                print("Placed floor block")
+                return true
+            else
+                print("Warning: Could not place floor block")
+                return false
+            end
+        else
+            print("Warning: No suitable floor blocks available")
+            return false
+        end
+    end
+    return true
+end
+
 -- Craft stairs from stone blocks
 local function craftStairs()
     local stoneSlots = findStoneBlocks()
@@ -389,6 +437,9 @@ local function digStairStep()
     turtle.down()
     if not smartDigDown() then return false end
     turtle.down()
+    
+    -- Place floor block if there isn't one already
+    placeFloor()
     
     return true
 end
