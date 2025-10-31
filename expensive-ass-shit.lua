@@ -345,35 +345,44 @@ local function buildStairsUp(maxSteps)
     turtle.turnLeft()
     
     local stairsPlaced = 0
+    local stepCount = 0
     
-    for i = 1, maxSteps do
+    -- Keep building stairs until we run out of blocks or reach a reasonable height
+    while true do
+        stepCount = stepCount + 1
+        
         -- Check if we have stairs to place
         local stairSlot = findStairs()
         if not stairSlot then
-            print("No more stairs available! Placed " .. stairsPlaced .. " stairs.")
+            print("No more stairs available! Placed " .. stairsPlaced .. " stairs total.")
             break
         end
         
-        print("Placing stair " .. (stairsPlaced + 1) .. " (step " .. i .. " of " .. maxSteps .. ")")
+        print("Placing stair " .. (stairsPlaced + 1) .. " (step " .. stepCount .. ")")
         
         -- Place stair block down
         if placeStair() then
             stairsPlaced = stairsPlaced + 1
         else
-            print("Warning: Could not place stair at step " .. i)
+            print("Warning: Could not place stair at step " .. stepCount)
         end
         
-        -- Move up and forward to next position
-        turtle.up()
+        -- Move up
+        if not turtle.up() then
+            print("Cannot move up further, stopping stair construction")
+            break
+        end
+        
+        -- Move forward
         if not turtle.forward() then
-            print("Error: Could not move forward at step " .. i)
-            return false
+            print("Cannot move forward, stopping stair construction")
+            break
         end
         
-        -- Check fuel and inventory
+        -- Check fuel
         if not checkFuel() then
             print("Fuel issues while building stairs")
-            return false
+            break
         end
     end
     
