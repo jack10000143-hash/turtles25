@@ -287,6 +287,67 @@ local function buildStairsUp(maxSteps)
     return true
 end
 
+-- Ascend back to the surface through the staircase
+local function ascendToSurface(steps)
+    print("Beginning ascent to surface (" .. steps .. " steps)...")
+    
+    -- Turn around to face back up the stairway
+    turtle.turnLeft()
+    turtle.turnLeft()
+    
+    for i = steps, 1, -1 do
+        print("Ascending step " .. i .. " of " .. steps)
+        
+        -- Check fuel before moving
+        if not checkFuel() then
+            print("Critical: Cannot ascend - fuel issues!")
+            return false
+        end
+        
+        -- Move up first
+        if not turtle.up() then
+            print("Error: Could not move up at step " .. i)
+            -- Try to dig up if there's a block
+            if turtle.detectUp() then
+                turtle.digUp()
+                if not turtle.up() then
+                    print("Failed to ascend after digging up!")
+                    return false
+                end
+            else
+                return false
+            end
+        end
+        
+        -- Move forward through the stairway
+        if not turtle.forward() then
+            print("Error: Could not move forward at step " .. i)
+            -- Try to dig forward if there's a block
+            if turtle.detect() then
+                turtle.dig()
+                if not turtle.forward() then
+                    print("Failed to move forward after digging!")
+                    return false
+                end
+            else
+                return false
+            end
+        end
+        
+        -- Check if we can still see the surface (detect sky or open space above)
+        if i == steps then
+            -- At the bottom, check if we can see sky above
+            local success, data = turtle.inspectUp()
+            if not success or (data and data.name == "minecraft:air") then
+                print("Can see sky above, continuing ascent...")
+            end
+        end
+    end
+    
+    print("Successfully reached the surface!")
+    return true
+end
+
 -- Place a chest and dump inventory
 local function placeChestAndDump()
     local chestSlot = findChest()
@@ -490,6 +551,14 @@ end
 local success, actualSteps = digStaircase(depth)
 if not success then
     print("Failed to complete staircase excavation")
+    if actualSteps > 0 then
+        print("Attempting to ascend back to surface...")
+        if ascendToSurface(actualSteps) then
+            print("Successfully returned to surface!")
+        else
+            print("Failed to ascend back to surface - turtle may be trapped!")
+        end
+    end
     return
 end
 
@@ -503,10 +572,21 @@ if actualSteps > 0 then
         if buildStairsUp(actualSteps) then
             print("Stairway construction complete!")
         else
-            print("Failed to build stairs back up")
+            print("Failed to build stairs back up, attempting to ascend without stairs...")
+            if ascendToSurface(actualSteps) then
+                print("Successfully returned to surface without stairs!")
+            else
+                print("Failed to ascend back to surface - turtle may be trapped!")
+            end
         end
     else
         print("Failed to craft stairs - no suitable blocks found")
+        print("Attempting to ascend back to surface...")
+        if ascendToSurface(actualSteps) then
+            print("Successfully returned to surface!")
+        else
+            print("Failed to ascend back to surface - turtle may be trapped!")
+        end
     end
 else
     print("No steps were dug, nothing to build")
